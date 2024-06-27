@@ -20,7 +20,7 @@ try {
         } elseif ($status == 'Paid') {
             $sql .= " AND (status = 'Basic' OR status = 'Starter' OR status = 'Pro')";
         } elseif ($status == 'Stop') {
-            $sql .= " AND status = '利用停止'";
+            $sql .= " AND status = '料金未払' OR status = '番号相違' OR status = '利用終了'";
         }
     }
     $stmt = $db->prepare($sql);

@@ -397,7 +397,10 @@ foreach ($csv_out_data as $row):
     }
 
     foreach($user_cms_access as $access){
-        $user2tags[$row['user_id']] = array_merge($user2tags[$row['user_id']], json_decode($access['tag'], true));
+        $cms_tag = json_decode($access['tag'], true);
+        if($cms_tag){
+            $user2tags[$row['user_id']] = array_merge($user2tags[$row['user_id']], json_decode($access['tag'], true));
+        }
     }
 
     // 合計アクセス数を計算する
@@ -1588,7 +1591,7 @@ endif; ?>
                     }
                 });
 
-                let url = `https://in.doc1.jp/google-api-php-client/api/index.php?client_id=${userId}&temp_id=${templateSelect.value}&date=${scheduled_date}&hour=${scheduled_hour}`;
+                let url = `https://in-test.doc1.jp/google-api-php-client/api/index.php?client_id=${userId}&temp_id=${templateSelect.value}&date=${scheduled_date}&hour=${scheduled_hour}`;
                 let width = 500;
                 let height = 600;
                 let left = window.screenX + (window.outerWidth - width) / 2;
