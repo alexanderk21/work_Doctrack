@@ -1,5 +1,4 @@
 <?php
-
 $csv_data = json_decode($_POST['csv_data'], true);
 
 foreach ($csv_data as &$data) {
@@ -9,6 +8,9 @@ foreach ($csv_data as &$data) {
     unset($data['form_result']);
     unset($data['client_user']);
 }
+// Unset the reference to avoid issues
+unset($data);
+
 date_default_timezone_set('Asia/Tokyo');
 $filename = "顧客一覧".date('Y-m-d').".csv";
 

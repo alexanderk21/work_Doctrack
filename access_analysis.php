@@ -21,8 +21,10 @@ $search_params = http_build_query([
     'date2' => $_GET['date2'] ?? null,
     'search' => $_GET['search'] ?? null,
     'search_title' => $_GET['search_title'] ?? null,
+    'regi_route' => $_GET['regi_route'] ?? null,
     'segment' => $_GET['segment'] ?? null,
     'tag' => $_GET['tag'] ?? null,
+    'userTag' => $_GET['userTag'] ?? null,
     'search_pdf_id' => $_GET['search_pdf_id'] ?? null,
     'search_redirect_id' => $_GET['search_redirect_id'] ?? null,
     'user_id' => $_GET['user_id'] ?? null,
@@ -48,6 +50,7 @@ try {
 
     foreach ($clients as $client) {
         $cusers[$client['id']] = $client['last_name'] . $client['first_name'];
+        $client_users[$client['id']] = $client;
     }
 
 
@@ -211,7 +214,7 @@ try {
             }
         }
 
-        $sql = "SELECT ura.*, r.title, r.url, usr.company FROM user_redirects_access ura 
+        $sql = "SELECT ura.*, r.title, r.url, usr.company, usr.route, usr.cuser_id FROM user_redirects_access ura 
         JOIN redirects r ON ura.redirect_id = r.id 
         JOIN users usr ON ura.user_id = usr.user_id 
         WHERE ura.cid=?";
@@ -282,7 +285,7 @@ try {
     });
     // CMSのアクセス情報を取得
     if (isset($segment['cms'])) {
-        $sql = "SELECT uca.*, c.title, usr.company FROM user_cms_access uca 
+        $sql = "SELECT uca.*, c.title, usr.company, usr.route, usr.cuser_id FROM user_cms_access uca 
         JOIN cmss c ON uca.cms_id = c.cms_id 
         JOIN users usr ON uca.user_id = usr.user_id 
         WHERE uca.cid = ?";
@@ -464,7 +467,7 @@ try {
                     <div class="modal-body" id="modal_req">
                         <table>
                             <tr style="width: 100%;">
-                                <td>アクセス日時</td>
+                                <td style="width: 100px;">アクセス日時</td>
                                 <td class="p-1">
                                     <input type="date" name="date1" value="<?php echo $date1_value; ?>">～
                                     <input type="date" name="date2" value="<?php echo $date2_value; ?>">
@@ -484,6 +487,26 @@ try {
                                         value="<?= $title_value; ?>">
                                 </td>
                             </tr>
+                            <tr>
+                                <td>登録経路</td>
+                                <td class="p-1">
+                                    <input type="checkbox" name="regi_route[]" value="メール配信" id="route_mail"
+                                        <?= (isset($_GET['regi_route']) && in_array('メール配信', $_GET['regi_route'])) ? 'checked' : ''; ?>>
+                                    <label for="route_mail">メール配信</label>
+                                    <input type="checkbox" name="regi_route[]" value="フォーム営業" id="route_form"
+                                        <?= (isset($_GET['regi_route']) && in_array('フォーム営業', $_GET['regi_route'])) ? 'checked' : ''; ?>>
+                                    <label for="route_form">フォーム営業</label>
+                                    <input type="checkbox" name="regi_route[]" value="手動" id="route_manual"
+                                        <?= (isset($_GET['regi_route']) && in_array('手動', $_GET['regi_route'])) ? 'checked' : ''; ?>>
+                                    <label for="route_manual">手動</label>
+                                    <input type="checkbox" name="regi_route[]" value="名刺データ" id="route_contacts"
+                                        <?= (isset($_GET['regi_route']) && in_array('名刺データ', $_GET['regi_route'])) ? 'checked' : ''; ?>>
+                                    <label for="route_contacts">名刺データ</label>
+                                    <input type="checkbox" name="regi_route[]" value="問い合わせ" id="route_inqury"
+                                        <?= (isset($_GET['regi_route']) && in_array('問い合わせ', $_GET['regi_route'])) ? 'checked' : ''; ?>>
+                                    <label for="route_inqury">問い合わせ</label>
+                                </td>
+                            </tr>
                             <tr style="width: 100%;">
                                 <td>タグ</td>
                                 <td class="p-1">
@@ -492,6 +515,18 @@ try {
                                             <?= (in_array($each, $selected_tags)) ? 'checked' : ''; ?>>
                                         <label for="tag[<?= $key; ?>]">
                                             <?= $each; ?>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>ユーザータグ</td>
+                                <td class="p-1">
+                                    <?php foreach ($client_users as $key => $cuser): ?>
+                                        <input type="checkbox" value="<?= $key; ?>" id="userTag<?= $key; ?>"
+                                            name="userTag[<?= $key; ?>]" <?= (isset($_GET['userTag']) && in_array($key, $_GET['userTag'])) ? 'checked' : ''; ?>>
+                                        <label for="userTag<?= $key; ?>">
+                                            <?= $cuser['last_name'] . $cuser['first_name']; ?>
                                         </label>
                                     <?php endforeach; ?>
                                 </td>
@@ -832,9 +867,12 @@ try {
                         $db = new PDO($dsn, $user, $pass, [
                             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                         ]);
-                        $stmt = $db->prepare("SELECT company FROM users where user_id=?");
+                        $stmt = $db->prepare("SELECT company, route, cuser_id FROM users where user_id=?");
                         $stmt->execute([$user_id]);
-                        $company = $stmt->fetchColumn();
+                        $user_data = $stmt->fetch(PDO::FETCH_ASSOC);
+                        $company = $user_data['company'];
+                        $route = $user_data['route'];
+                        $cuser_id = $user_data['cuser_id'];
 
                     } catch (PDOException $e) {
                         echo '接続失敗' . $e->getMessage();
@@ -849,6 +887,7 @@ try {
                 // PDF
                 $current_user_id = null;
                 $company = "";
+                $route = "";
                 $duration_current = 0;
                 $cta_clicks_current = 0;
                 $page_moved_current = 0;
@@ -911,9 +950,12 @@ try {
                                 $db = new PDO($dsn, $user, $pass, [
                                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                                 ]);
-                                $stmt = $db->prepare("SELECT company FROM users where user_id=?");
+                                $stmt = $db->prepare("SELECT company, route, cuser_id FROM users where user_id=?");
                                 $stmt->execute([$current_user_id]);
-                                $company = $stmt->fetchColumn();
+                                $user_data = $stmt->fetch(PDO::FETCH_ASSOC);
+                                $company = $user_data['company'];
+                                $route = $user_data['route'];
+                                $cuser_id = $user_data['cuser_id'];
 
                             } catch (PDOException $e) {
                                 echo '接続失敗' . $e->getMessage();
@@ -926,6 +968,8 @@ try {
                                 'accessed_at' => $accessed_at_current,
                                 'user_id' => $current_user_id,
                                 'company' => $company,
+                                'route' => $route,
+                                'cuser_id' => $cuser_id,
                                 'division' => 'PDFファイル',
                                 'title' => './pdf/' . $pdf_versions_current['pdf_id'] . '_' . $pdf_versions_current['pdf_version_id'] . '.pdf',
                                 'csv_title' => $pdf_versions_current['title'],
@@ -961,9 +1005,12 @@ try {
                         $db = new PDO($dsn, $user, $pass, [
                             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                         ]);
-                        $stmt = $db->prepare("SELECT company FROM users where user_id=?");
+                        $stmt = $db->prepare("SELECT company, route, cuser_id FROM users where user_id=?");
                         $stmt->execute([$current_user_id]);
-                        $company = $stmt->fetchColumn();
+                        $user_data = $stmt->fetch(PDO::FETCH_ASSOC);
+                        $company = $user_data['company'];
+                        $route = $user_data['route'];
+                        $cuser_id = $user_data['cuser_id'];
 
                     } catch (PDOException $e) {
                         echo '接続失敗' . $e->getMessage();
@@ -974,6 +1021,8 @@ try {
                         'accessed_at' => $accessed_at_current,
                         'user_id' => $current_user_id,
                         'company' => $company,
+                        'route' => $route,
+                        'cuser_id' => $cuser_id,
                         'division' => 'PDFファイル',
                         'title' => './pdf/' . $pdf_versions_current['pdf_id'] . '_' . $pdf_versions_current['pdf_version_id'] . '.pdf',
                         'csv_title' => $pdf_versions_current['title'],
@@ -990,6 +1039,8 @@ try {
                         'accessed_at' => $row['accessed_at'],
                         'user_id' => $row['user_id'],
                         'company' => $row['company'],
+                        'route' => $row['route'],
+                        'cuser_id' => $row['cuser_id'],
                         'division' => 'リダイレクト',
                         'title' => $row['url'],
                         'csv_title' => $row['title'],
@@ -1006,6 +1057,8 @@ try {
                         'accessed_at' => $row['created_at'],
                         'user_id' => $row['user_id'],
                         'company' => $row['company'],
+                        'route' => $row['route'],
+                        'cuser_id' => $row['cuser_id'],
                         'division' => 'CMS',
                         'title' => './cms_view.php?t=' . $row['cms_id'],
                         'csv_title' => $row['title'],
@@ -1024,10 +1077,7 @@ try {
                 $filter_customers = [];
                 $final_access = [];
                 foreach ($results as $k => $r) {
-                    if (!in_array($r['user_id'], $filter_customers)) {
-                        $filter_customers[] = $r['user_id'];
-                        $final_access[$r['user_id']] = $r['accessed_at'];
-                    }
+
                     if (isset($tracking[$r['user_id']])) {
                         $tracking[$r['user_id']]['access_num']++;
                         if ($r['duration'] !== null) {
@@ -1061,6 +1111,18 @@ try {
                         if ($r['cta_clicks'] < 1 || $r['cta_clicks'] == NULL) {
                             unset($results[$k]);
                         }
+                    }
+                    if(isset($_GET['regi_route']) && (is_null($r['route']) || !in_array($r['route'], $_GET['regi_route']))){
+                        unset($results[$k]);
+                        continue;
+                    }
+                    if(isset($_GET['userTag']) && (is_null($r['cuser_id']) || !in_array($r['cuser_id'], $_GET['userTag']))){
+                        unset($results[$k]);
+                        continue;
+                    }
+                    if (!in_array($r['user_id'], $filter_customers)) {
+                        $filter_customers[] = $r['user_id'];
+                        $final_access[$r['user_id']] = $r['accessed_at'];
                     }
                 }
                 // 1ページあたりに表示するアイテム数
@@ -1196,6 +1258,10 @@ try {
                                 break;
                             }
                         }
+                    }
+
+                    if ($user['cuser_id'] == '') {
+                        $user['cuser_id'] = $client_id;
                     }
                     echo '<td>' . $user['company'] . '</td>';
                     echo '<td>' . $user['surename'] . $user['name'] . '</td>';

@@ -47,6 +47,9 @@ if (isset($_GET['service_detail'])) {
 if (isset($_GET['hope_matching'])) {
     $search_params .= "&hope_matching=" . $hope_matching;
 }
+if (isset($_GET['users_id'])) {
+    $search_params .= "&users_id=" . $_GET['users_id'];
+}
 
 $href['regi_route'] = $regi_route;
 if (isset($_GET['regi_route'])) {
@@ -330,6 +333,18 @@ try {
     foreach ($user_redl_access_all as $uuu) {
         $user_redl_access_s[$uuu['user_id']][] = $uuu;
     }
+    //ユーザーリダイレクトアクセス
+    $sql = "SELECT uca.*, c.title, c.tag FROM user_cms_access uca
+    JOIN cmss c ON uca.cms_id = c.cms_id
+    WHERE uca.cid=?";
+    $sql .= " ORDER BY uca.created_at DESC";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([$client_id]);
+    $user_cms_access_all = $stmt->fetchAll();
+
+    foreach ($user_cms_access_all as $uuu) {
+        $user_cms_access_s[$uuu['user_id']][] = $uuu;
+    }
 } catch (PDOException $e) {
     echo '接続失敗' . $e->getMessage();
     exit();
@@ -352,6 +367,7 @@ foreach ($csv_out_data as $row):
     $user2tags[$row['user_id']] = $user2tags[$row['user_id']] ?? [];
     $user_pdf_access = $user_pdf_access_s[$row['user_id']] ?? [];
     $user_redirects_access = $user_redl_access_s[$row['user_id']] ?? [];
+    $user_cms_access = $user_cms_access_s[$row['user_id']] ?? [];
 
     foreach ($user_pdf_access as $access) {
         $sql = "SELECT * FROM tags WHERE table_id = ?  AND table_name = 'pdf_versions'";
@@ -380,8 +396,12 @@ foreach ($csv_out_data as $row):
         }
     }
 
+    foreach($user_cms_access as $access){
+        $user2tags[$row['user_id']] = array_merge($user2tags[$row['user_id']], json_decode($access['tag'], true));
+    }
+
     // 合計アクセス数を計算する
-    $totalAccessCount = $user_pdf_access_count + count($user_redirects_access);
+    $totalAccessCount = $user_pdf_access_count + count($user_redirects_access)+ count($user_cms_access);
     if (isset($action['アクセス数']) && $action['アクセス数']['action_state'] == 1) {
         $point += (int) ($totalAccessCount / $action['アクセス数']['action_value']) * $action['アクセス数']['action_point'];
     }
@@ -408,20 +428,21 @@ foreach ($csv_out_data as $row):
     //最終アクセス期間
     $final_pdf = (!empty($user_pdf_access)) ? date('Y-m-d', strtotime($user_pdf_access[0]['accessed_at'])) : date('1970-1-1');
     $final_redirect = (!empty($user_redirects_access)) ? date('Y-m-d', strtotime($user_redirects_access[0]['accessed_at'])) : date('1970-1-1');
-    if ($final_pdf > $final_redirect) {
-        $final_access = $final_pdf;
-    } else {
-        $final_access = $final_redirect;
-    }
+    $final_cms = (!empty($user_cms_access)) ? date('Y-m-d', strtotime($user_cms_access[0]['created_at'])) : date('1970-1-1');
+    
+    $final_access = max($final_pdf, $final_redirect, $final_cms);
+    
     $today = new DateTime();
     $interval = $today->diff(new DateTime($final_access));
     $not_access_range = $interval->days;
+    
     if (isset($action['未アクセス期間']) && $action['未アクセス期間']['action_state'] == 1) {
         $point += (int) ($not_access_range / $action['未アクセス期間']['action_value']) * $action['未アクセス期間']['action_point'];
     }
     if ($point < 0) {
         $point = 0;
     }
+
     if ($final_access == date('1970-1-1')) {
         $not_access_range = '-';
     }
