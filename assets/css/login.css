@@ -1,0 +1,125 @@
+body{
+    padding: 0;
+    margin: 0;
+    font-size: 14px;
+    background: #d7cad8;
+}
+
+input:focus{
+    outline:none;
+}
+
+
+
+.wrapper{
+    width: 25%;
+    background: white;
+    margin: 10% auto;
+    padding: 30px 15px;
+    text-align: center;
+    border-radius: 10px;
+}
+
+form{
+    width: 100%;
+
+}
+
+.container{
+    width: 80%;
+    margin: 0 auto;
+
+}
+
+button.signup_btn{
+    padding: 10px;
+    width: 80%;
+    margin: 5px;
+    border: solid 1px #b3b3b3;
+}
+a{
+    text-decoration: none;
+    color: #0087c7;
+}
+input:not(.private){
+    width: 90%;
+    padding: 8px 12px;
+    margin: 5px;
+    border: solid 1px #d5d5d5;
+    border-radius: 3px;
+}
+input[readonly]{
+    background-color: #c7c7c7;
+    color: #707070;
+}
+.notes{
+    text-align: left;
+    padding: 5px 15px;
+    background: #fffdf5;
+    border-radius: 10px;
+    border: solid 1px #d7d7d7;
+    font-size: 10px;
+}
+.notes h1{
+    text-align: center;
+}
+.notes p{
+    text-align: center;
+    font-weight: bold;
+}
+button#register{
+    padding: 10px 20px;
+    border: none;
+    background: #1c86b9;
+    border-radius: 10px;
+    color: white;
+}
+button#register:hover{
+    background: #002b3f;
+}
+img.logo_{
+    width: 110px;
+    margin: 5px;
+}
+input#agree-check{
+    width: 15px;
+}
+
+.container p{
+    margin: 0;
+}
+
+.container p.client_domain{
+    text-align: left;
+}
+
+.domain{
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+
+
+#subdomain{
+    padding: 8px 12px;
+}
+
+
+@media only screen and (max-width: 960px) {
+    .wrapper{
+        width: 80%;
+    }
+    .btn{
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+}
+
+
+
+.error{
+    color: red;
+    font-size: 13px;
+}
